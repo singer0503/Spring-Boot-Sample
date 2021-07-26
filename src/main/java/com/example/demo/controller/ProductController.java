@@ -1,14 +1,14 @@
 package com.example.demo.controller;
 
 import com.example.demo.entity.Product;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import javax.annotation.PostConstruct;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +42,28 @@ public class ProductController {
         }else{
             return ResponseEntity.notFound().build();
         }
+
+    }
+
+    @PostMapping("/products")   // 使用 @PostMapping 標記可配置 POST 請求的 API
+    public ResponseEntity<Product> createProduct(@RequestBody Product request){ //透過 @RequestBody 標記來接收前端送來的請求主體（body）。Spring Boot 會將請求主體的 JSON 字串轉換為該資料型態的物件。
+
+        // 首先檢查該 id 是否重複，是的話就回傳狀態碼422（Unprocessable Entity），否則就存進 List。
+        boolean isIdDuplicated = productDB.stream().anyMatch(p ->p.getId().equals(request.getId()));
+        if(isIdDuplicated){
+            return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).build();
+        }
+
+        Product product = new Product();
+        product.setId(request.getId());
+        product.setName(request.getName());
+        product.setPrice(request.getPrice());
+        productDB.add(product);
+
+        // 一般會回應狀態碼201（Created），並附上指向這個新資源的 URI。這裡透過 ServletUriComponentsBuilder 來建立 URI。
+        URI location = ServletUriComponentsBuilder.
+                fromCurrentRequest().path("/{id}").buildAndExpand(product.getId()).toUri();
+        return ResponseEntity.created(location).body(product);
 
     }
 }
